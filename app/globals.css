@@ -1621,3 +1621,132 @@ a:focus-visible {
     font-size: 29px;
   }
 }
+
+
+.auth-error,
+.account-message {
+  margin: 0 0 18px;
+  padding: 11px 13px;
+  border: 1px solid #efcfcd;
+  border-radius: 10px;
+  background: #fff2f1;
+  color: #a94746;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.auth-field {
+  display: flex;
+  margin-bottom: 14px;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.auth-field > span {
+  color: #48635e;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.auth-field input {
+  width: 100%;
+  height: 45px;
+  padding: 0 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  outline: 0;
+  background: #fff;
+  color: #213f3a;
+  font-size: 12px;
+}
+
+.auth-field input:focus {
+  border-color: #65a69b;
+  box-shadow: 0 0 0 3px rgba(16, 104, 95, 0.1);
+}
+
+.auth-card .auth-submit {
+  margin-top: 7px;
+}
+
+.auth-card .auth-security-note {
+  margin-top: 24px;
+}
+
+.profile-settings {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.profile-settings:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.account-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(16, 104, 95, 0.1), transparent 30%),
+    var(--background);
+}
+
+.account-card {
+  width: min(470px, 100%);
+  padding: clamp(26px, 5vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+
+.account-back {
+  display: inline-block;
+  margin-bottom: 32px;
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.account-card h1 {
+  margin: 8px 0 8px;
+  color: #173e39;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 31px;
+  font-weight: 500;
+}
+
+.account-card > p:not(.eyebrow) {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.account-message.success {
+  border-color: #cfe6dc;
+  background: #eef8f4;
+  color: #20705f;
+}
+
+.account-logout {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: #a65352;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
