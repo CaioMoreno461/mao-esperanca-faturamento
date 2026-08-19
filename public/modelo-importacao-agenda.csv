@@ -1,0 +1,2 @@
+id_externo,paciente,telefone,email,servico,data_hora,profissional,estado,valor
+agenda-001,Exemplo Paciente,+351 910 000 000,exemplo@invalid.test,Consulta de avaliação,2026-08-25T10:00:00+01:00,Dra. Sofia Almeida,confirmed,"70,00"
