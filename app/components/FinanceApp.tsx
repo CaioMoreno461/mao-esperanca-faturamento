@@ -131,8 +131,9 @@ export default function FinanceApp() {
           <span aria-hidden="true">›</span>
         </button>
         <div className="profile-card">
-          <span className="profile-avatar">CM</span>
+          <span className="profile-avatar">ME</span>
           <span><strong>Gestão da clínica</strong><small>Acesso interno</small></span>
+          <a className="profile-settings" href="/conta" aria-label="Definições da conta">⚙</a>
         </div>
       </aside>
 
