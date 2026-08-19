@@ -322,7 +322,7 @@ function buildLedger(
 
 function buildCashflow(ledger: LedgerEntry[]): CashflowPoint[] {
   const points: CashflowPoint[] = [];
-  const now = new Date("2026-08-19T12:00:00+01:00");
+  const now = new Date();
   for (let index = 5; index >= 0; index -= 1) {
     const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
