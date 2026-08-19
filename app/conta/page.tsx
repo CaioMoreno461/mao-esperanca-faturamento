@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getAuthUser } from "../auth";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function AccountPage({
   return (
     <main className="account-page">
       <section className="account-card">
-        <a className="account-back" href="/">← Voltar ao painel</a>
+        <Link className="account-back" href="/">← Voltar ao painel</Link>
         <p className="eyebrow">Segurança da conta</p>
         <h1>Alterar senha</h1>
         <p>
@@ -64,3 +65,4 @@ export default async function AccountPage({
     </main>
   );
 }
+
