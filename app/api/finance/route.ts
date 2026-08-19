@@ -93,6 +93,9 @@ export async function POST(request: Request) {
       case "importAppointments":
         await importAppointments(db, payload, actor);
         break;
+      case "deleteRecord":
+        await deleteRecord(db, payload, actor);
+        break;
       default:
         return Response.json({ error: "Ação inválida." }, { status: 400 });
     }
@@ -250,7 +253,7 @@ async function buildDashboard(db: D1Database): Promise<DashboardData> {
 
   return {
     generatedAt: new Date().toISOString(),
-    demoMode: true,
+    demoMode: false,
     metrics: {
       receivedCents,
       clinicShareCents: cases.reduce((sum, item) => sum + item.clinicShareCents, 0),
@@ -478,6 +481,73 @@ async function importAppointments(db: D1Database, payload: ActionPayload, actor:
   await audit(db, "import", "appointment", null, actor, { imported, source: "csv" });
 }
 
+async function deleteRecord(db: D1Database, payload: ActionPayload, actor: string | null) {
+  const recordType = requiredText(payload.recordType, "Tipo de registo");
+  const id = requiredPositiveInt(payload.id, "Registo");
+
+  if (recordType === "case") {
+    const item = await db.prepare("SELECT patient_id FROM treatment_cases WHERE id = ?").bind(id).first<{ patient_id: number }>();
+    if (!item) throw new Error("Registo inválido ou já removido.");
+    await db.batch([
+      db.prepare("DELETE FROM payments WHERE case_id = ?").bind(id),
+      db.prepare("DELETE FROM lab_jobs WHERE case_id = ?").bind(id),
+      db.prepare("DELETE FROM payouts WHERE case_id = ?").bind(id),
+      db.prepare("DELETE FROM treatment_cases WHERE id = ?").bind(id),
+    ]);
+    await removePatientIfUnused(db, item.patient_id);
+    await audit(db, "delete", "treatment_case", id, actor, { cascade: ["payments", "lab_jobs", "payouts"] });
+    return;
+  }
+
+  if (recordType === "appointment") {
+    const item = await db.prepare("SELECT patient_id FROM appointments WHERE id = ?").bind(id).first<{ patient_id: number }>();
+    if (!item) throw new Error("Registo inválido ou já removido.");
+    await db.prepare("DELETE FROM appointments WHERE id = ?").bind(id).run();
+    await removePatientIfUnused(db, item.patient_id);
+    await audit(db, "delete", "appointment", id, actor, {});
+    return;
+  }
+
+  if (recordType === "payment" || recordType === "expense" || recordType === "payout") {
+    const tables = { payment: "payments", expense: "expenses", payout: "payouts" } as const;
+    const table = tables[recordType];
+    const result = await db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
+    if (!result.meta.changes) throw new Error("Registo inválido ou já removido.");
+    await audit(db, "delete", recordType, id, actor, {});
+    return;
+  }
+
+  if (recordType === "professional") {
+    const usage = await db.prepare(
+      "SELECT (SELECT COUNT(*) FROM treatment_cases WHERE professional_id = ?) + (SELECT COUNT(*) FROM appointments WHERE professional_id = ?) + (SELECT COUNT(*) FROM payouts WHERE professional_id = ?) AS total",
+    ).bind(id, id, id).first<{ total: number }>();
+    if ((usage?.total ?? 0) > 0) throw new Error("Não pode remover um profissional com registos associados.");
+    const result = await db.prepare("DELETE FROM professionals WHERE id = ?").bind(id).run();
+    if (!result.meta.changes) throw new Error("Registo inválido ou já removido.");
+    await audit(db, "delete", "professional", id, actor, {});
+    return;
+  }
+
+  if (recordType === "laboratory") {
+    const usage = await db.prepare(
+      "SELECT (SELECT COUNT(*) FROM lab_jobs WHERE laboratory_id = ?) + (SELECT COUNT(*) FROM payouts WHERE laboratory_id = ?) AS total",
+    ).bind(id, id).first<{ total: number }>();
+    if ((usage?.total ?? 0) > 0) throw new Error("Não pode remover um laboratório com registos associados.");
+    const result = await db.prepare("DELETE FROM laboratories WHERE id = ?").bind(id).run();
+    if (!result.meta.changes) throw new Error("Registo inválido ou já removido.");
+    await audit(db, "delete", "laboratory", id, actor, {});
+    return;
+  }
+
+  throw new Error("Tipo de registo inválido.");
+}
+
+async function removePatientIfUnused(db: D1Database, patientId: number) {
+  await db.prepare(
+    "DELETE FROM patients WHERE id = ? AND NOT EXISTS (SELECT 1 FROM treatment_cases WHERE patient_id = ?) AND NOT EXISTS (SELECT 1 FROM appointments WHERE patient_id = ?)",
+  ).bind(patientId, patientId, patientId).run();
+}
+
 async function audit(db: D1Database, action: string, entity: string, entityId: number | null, actor: string | null, details: Record<string, unknown>) {
   await db.prepare("INSERT INTO audit_logs (action, entity, entity_id, actor_email, details, created_at) VALUES (?, ?, ?, ?, ?, ?)").bind(action, entity, entityId, actor, JSON.stringify(details), new Date().toISOString()).run();
 }
@@ -523,6 +593,7 @@ function unauthorized() {
 function routeError(error: unknown) {
   const message = error instanceof Error ? error.message : "Ocorreu um erro inesperado.";
   const lower = message.toLowerCase();
-  const status = lower.includes("obrigat") || lower.includes("inválid") || lower.includes("superior") ? 400 : 500;
+  const status = lower.includes("obrigat") || lower.includes("inválid") || lower.includes("superior") || lower.includes("não pode remover") ? 400 : 500;
   return Response.json({ error: message }, { status });
 }
+
