@@ -1,14 +1,23 @@
 import { redirect } from "next/navigation";
-import {
-  chatGPTSignInPath,
-  getChatGPTUser,
-} from "../chatgpt-auth";
+import { getAuthUser } from "../auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function SignInPage() {
-  const user = await getChatGPTUser();
+const errorMessages: Record<string, string> = {
+  invalid: "Utilizador ou senha incorretos.",
+  configuration: "O acesso ainda não foi configurado.",
+};
+
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const user = await getAuthUser();
   if (user) redirect("/");
+
+  const { error } = await searchParams;
+  const message = error ? errorMessages[error] : null;
 
   return (
     <main className="auth-page">
@@ -34,40 +43,55 @@ export default async function SignInPage() {
           <span aria-hidden="true">✓</span>
           <p>
             <strong>Acesso protegido</strong>
-            <small>Os seus dados de acesso não são guardados pela aplicação.</small>
+            <small>Sessão segura com duração máxima de oito horas.</small>
           </p>
         </div>
       </section>
 
       <section className="auth-panel">
-        <div className="auth-card">
+        <form className="auth-card" action="/api/auth/login" method="post">
           <div className="auth-lock" aria-hidden="true">⌁</div>
           <p className="eyebrow">Bem-vindo de volta</p>
           <h2>Entre na sua conta</h2>
           <p className="auth-description">
-            Use a sua conta ChatGPT autorizada para aceder ao painel financeiro
-            da Clínica Mão de Esperança.
+            Introduza as credenciais internas da Clínica Mão de Esperança.
           </p>
 
-          <a className="auth-submit" href={chatGPTSignInPath("/")}>
-            <span aria-hidden="true">◆</span>
-            Entrar com ChatGPT
-          </a>
+          {message && <div className="auth-error" role="alert">{message}</div>}
 
-          <div className="auth-divider"><span>acesso institucional</span></div>
+          <label className="auth-field">
+            <span>Utilizador</span>
+            <input
+              name="username"
+              type="text"
+              autoComplete="username"
+              required
+              autoFocus
+            />
+          </label>
+
+          <label className="auth-field">
+            <span>Senha</span>
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </label>
+
+          <button className="auth-submit" type="submit">
+            Entrar no painel
+          </button>
 
           <div className="auth-security-note">
             <span aria-hidden="true">i</span>
             <p>
-              Apenas utilizadores autorizados conseguem consultar ou alterar
-              informações financeiras.
+              Apenas pessoas autorizadas devem utilizar estas credenciais.
+              Termine sempre a sessão em computadores partilhados.
             </p>
           </div>
-
-          <p className="auth-help">
-            Precisa de acesso? Contacte o administrador da clínica.
-          </p>
-        </div>
+        </form>
       </section>
     </main>
   );
