@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getAuthUser } from "@/app/auth";
 import { ensureFinanceSchema, getFinanceDb } from "@/db/runtime";
 import { calculatePatientDebt, calculateSplit } from "@/lib/finance";
 import type {
@@ -52,7 +52,7 @@ type ActionPayload = Record<string, unknown> & { action?: string };
 
 export async function GET() {
   try {
-    const user = await getChatGPTUser();
+    const user = await getAuthUser();
     if (!user) return unauthorized();
     const db = await getFinanceDb();
     await ensureFinanceSchema(db);
@@ -64,12 +64,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await getChatGPTUser();
+    const user = await getAuthUser();
     if (!user) return unauthorized();
     const db = await getFinanceDb();
     await ensureFinanceSchema(db);
     const payload = (await request.json()) as ActionPayload;
-    const actor = user.email;
+    const actor = user.username;
 
     switch (payload.action) {
       case "createCase":
