@@ -116,115 +116,23 @@ export async function getFinanceDb(): Promise<D1Database> {
 
 export async function ensureFinanceSchema(db: D1Database) {
   await db.batch(schemaStatements.map((statement) => db.prepare(statement)));
-  await seedDemoData(db);
+  await removeDemoData(db);
+}
+async function removeDemoData(db: D1Database) {
+  const demoCaseIds =
+    "SELECT c.id FROM treatment_cases c JOIN patients p ON p.id = c.patient_id WHERE p.external_id LIKE 'demo-p-%'";
+  await db.batch([
+    db.prepare(`DELETE FROM payments WHERE case_id IN (${demoCaseIds})`),
+    db.prepare(`DELETE FROM lab_jobs WHERE case_id IN (${demoCaseIds})`),
+    db.prepare(`DELETE FROM payouts WHERE case_id IN (${demoCaseIds})`),
+    db.prepare(`DELETE FROM treatment_cases WHERE id IN (${demoCaseIds})`),
+    db.prepare("DELETE FROM appointments WHERE source = 'demo' OR external_id LIKE 'demo-a-%'"),
+    db.prepare("DELETE FROM expenses WHERE created_at = '2026-06-12T12:00:00.000Z' AND description = 'Materiais clínicos'"),
+    db.prepare("DELETE FROM expenses WHERE created_at = '2026-08-01T08:00:00.000Z' AND description = 'Renda e serviços'"),
+    db.prepare("DELETE FROM patients WHERE external_id LIKE 'demo-p-%'"),
+    db.prepare("DELETE FROM professionals WHERE created_at = '2026-08-19T10:00:00.000Z' AND id NOT IN (SELECT professional_id FROM treatment_cases) AND id NOT IN (SELECT professional_id FROM appointments WHERE professional_id IS NOT NULL)"),
+    db.prepare("DELETE FROM laboratories WHERE created_at = '2026-08-19T10:00:00.000Z' AND id NOT IN (SELECT laboratory_id FROM lab_jobs)"),
+  ]);
 }
 
-async function seedDemoData(db: D1Database) {
-  const existing = await db
-    .prepare("SELECT COUNT(*) AS total FROM professionals")
-    .first<{ total: number }>();
-  if ((existing?.total ?? 0) > 0) return;
 
-  const now = "2026-08-19T10:00:00.000Z";
-  const statements = [
-    db
-      .prepare(
-        "INSERT INTO professionals (id, name, specialty, commission_bps, color, active, created_at) VALUES (?, ?, ?, 5000, ?, 1, ?)",
-      )
-      .bind(1, "Dra. Sofia Almeida", "Implantologia", "#0f766e", now),
-    db
-      .prepare(
-        "INSERT INTO professionals (id, name, specialty, commission_bps, color, active, created_at) VALUES (?, ?, ?, 5000, ?, 1, ?)",
-      )
-      .bind(2, "Dr. Miguel Santos", "Medicina dentária geral", "#3157a4", now),
-    db
-      .prepare(
-        "INSERT INTO professionals (id, name, specialty, commission_bps, color, active, created_at) VALUES (?, ?, ?, 5000, ?, 1, ?)",
-      )
-      .bind(3, "Dra. Leonor Costa", "Ortodontia", "#9a5b18", now),
-    db
-      .prepare(
-        "INSERT INTO laboratories (id, name, contact_name, email, phone, active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)",
-      )
-      .bind(1, "Algarve Dental Lab", "Nuno Carvalho", "geral@algarvedentallab.pt", "+351 289 000 110", now),
-    db
-      .prepare(
-        "INSERT INTO laboratories (id, name, contact_name, email, phone, active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)",
-      )
-      .bind(2, "Cerâmica Sul", "Inês Duarte", "laboratorio@ceramicasul.pt", "+351 289 000 220", now),
-    db
-      .prepare("INSERT INTO patients (id, external_id, name, phone, email, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(1, "demo-p-001", "Joana Ribeiro", "+351 910 000 101", "joana.exemplo@invalid.test", now),
-    db
-      .prepare("INSERT INTO patients (id, external_id, name, phone, email, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(2, "demo-p-002", "Rui Costa", "+351 910 000 102", "rui.exemplo@invalid.test", now),
-    db
-      .prepare("INSERT INTO patients (id, external_id, name, phone, email, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(3, "demo-p-003", "Marta Nunes", "+351 910 000 103", "marta.exemplo@invalid.test", now),
-    db
-      .prepare("INSERT INTO patients (id, external_id, name, phone, email, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(4, "demo-p-004", "Diogo Martins", "+351 910 000 104", "diogo.exemplo@invalid.test", now),
-    db
-      .prepare("INSERT INTO treatment_cases (id, patient_id, professional_id, title, budget_total_cents, status, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind(1, 1, 1, "Carga imediata — arcada superior", 320000, "completed", "2026-08-15", "2026-05-11T09:00:00.000Z"),
-    db
-      .prepare("INSERT INTO treatment_cases (id, patient_id, professional_id, title, budget_total_cents, status, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind(2, 2, 2, "Tratamento restaurador", 120000, "in_progress", "2026-09-10", "2026-06-03T11:30:00.000Z"),
-    db
-      .prepare("INSERT INTO treatment_cases (id, patient_id, professional_id, title, budget_total_cents, status, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind(3, 3, 1, "Prótese fixa sobre implantes", 280000, "in_progress", "2026-09-30", "2026-07-22T15:00:00.000Z"),
-    db
-      .prepare("INSERT INTO treatment_cases (id, patient_id, professional_id, title, budget_total_cents, status, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind(4, 4, 3, "Avaliação e aparelho ortodôntico", 18000, "completed", "2026-08-19", "2026-08-10T14:00:00.000Z"),
-    db
-      .prepare("INSERT INTO payments (case_id, amount_cents, method, received_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(1, 120000, "transferência", "2026-05-11", "Entrada", "2026-05-11T09:10:00.000Z"),
-    db
-      .prepare("INSERT INTO payments (case_id, amount_cents, method, received_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(1, 200000, "cartão", "2026-07-18", "Liquidação", "2026-07-18T16:10:00.000Z"),
-    db
-      .prepare("INSERT INTO payments (case_id, amount_cents, method, received_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(2, 90000, "multibanco", "2026-06-03", "Pagamento parcial", "2026-06-03T11:40:00.000Z"),
-    db
-      .prepare("INSERT INTO payments (case_id, amount_cents, method, received_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(3, 150000, "transferência", "2026-08-02", "Primeira fase", "2026-08-02T12:00:00.000Z"),
-    db
-      .prepare("INSERT INTO payments (case_id, amount_cents, method, received_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind(4, 18000, "numerário", "2026-08-10", "Pago", "2026-08-10T14:10:00.000Z"),
-    db
-      .prepare("INSERT INTO lab_jobs (case_id, laboratory_id, description, cost_cents, status, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .bind(1, 1, "Estrutura provisória e definitiva", 60000, "delivered", "2026-07-12", "2026-05-12T10:00:00.000Z"),
-    db
-      .prepare("INSERT INTO lab_jobs (case_id, laboratory_id, description, cost_cents, status, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .bind(3, 2, "Cerâmica e componentes protéticos", 42000, "in_production", "2026-09-12", "2026-08-03T10:00:00.000Z"),
-    db
-      .prepare("INSERT INTO payouts (recipient_type, professional_id, laboratory_id, case_id, amount_cents, method, paid_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("laboratory", null, 1, 1, 60000, "transferência", "2026-07-25", "Lab liquidado", "2026-07-25T10:00:00.000Z"),
-    db
-      .prepare("INSERT INTO payouts (recipient_type, professional_id, laboratory_id, case_id, amount_cents, method, paid_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("professional", 1, null, 1, 130000, "transferência", "2026-07-26", "Caso liquidado", "2026-07-26T10:00:00.000Z"),
-    db
-      .prepare("INSERT INTO payouts (recipient_type, professional_id, laboratory_id, case_id, amount_cents, method, paid_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("professional", 2, null, 2, 30000, "transferência", "2026-07-30", "Adiantamento", "2026-07-30T10:00:00.000Z"),
-    db
-      .prepare("INSERT INTO expenses (description, category, amount_cents, method, paid_at, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind("Materiais clínicos", "materiais", 28500, "cartão", "2026-06-12", "2026-06-12T12:00:00.000Z"),
-    db
-      .prepare("INSERT INTO expenses (description, category, amount_cents, method, paid_at, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .bind("Renda e serviços", "estrutura", 45000, "débito", "2026-08-01", "2026-08-01T08:00:00.000Z"),
-    db
-      .prepare("INSERT INTO appointments (external_id, patient_id, professional_id, professional_name, service, starts_at, status, price_cents, source, synced_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("demo-a-001", 1, 1, "Dra. Sofia Almeida", "Revisão de implantes", "2026-08-20T09:30:00+01:00", "confirmed", 7000, "demo", null, now),
-    db
-      .prepare("INSERT INTO appointments (external_id, patient_id, professional_id, professional_name, service, starts_at, status, price_cents, source, synced_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("demo-a-002", 2, 2, "Dr. Miguel Santos", "Restauração", "2026-08-20T11:00:00+01:00", "confirmed", 9500, "demo", null, now),
-    db
-      .prepare("INSERT INTO appointments (external_id, patient_id, professional_id, professional_name, service, starts_at, status, price_cents, source, synced_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("demo-a-003", 3, 1, "Dra. Sofia Almeida", "Prova de estrutura", "2026-08-21T15:00:00+01:00", "pending", 0, "demo", null, now),
-    db
-      .prepare("INSERT INTO appointments (external_id, patient_id, professional_id, professional_name, service, starts_at, status, price_cents, source, synced_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .bind("demo-a-004", 4, 3, "Dra. Leonor Costa", "Consulta de ortodontia", "2026-08-22T10:15:00+01:00", "confirmed", 5000, "demo", null, now),
-  ];
-
-  await db.batch(statements);
-}
