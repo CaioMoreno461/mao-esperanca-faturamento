@@ -1750,3 +1750,25 @@ a:focus-visible {
   font-size: 10px;
   font-weight: 700;
 }
+
+.delete-button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid #efd5d3;
+  border-radius: 7px;
+  background: #fff7f6;
+  color: #a94f4e;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.delete-button:hover {
+  border-color: #dfa9a6;
+  background: #ffefed;
+}
+
+.ledger-row {
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+}
+
