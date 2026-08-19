@@ -4,7 +4,7 @@ Aplicação web interna, responsiva e instalável para controlar orçamentos,
 recebimentos, caixa, honorários de profissionais de medicina dentária e custos
 de laboratórios de prótese.
 
-> Estado atual: MVP funcional com dados fictícios. Não é software de faturação
+> Estado atual: aplicação interna de gestão financeira. Não é software de faturação
 > fiscal e não emite faturas para a Autoridade Tributária.
 
 ## Regra financeira
@@ -127,8 +127,10 @@ Antes de usar pacientes reais:
    aplicáveis à clínica em Portugal.
 5. Estabeleça cópias de segurança, retenção, exportação e resposta a incidentes.
 
-## Dados demonstrativos
+## Ambiente de produção
 
-Na primeira execução, a base é preenchida com pessoas e valores totalmente
-fictícios para permitir avaliação do fluxo. Esses registos não representam
-pacientes reais.
+A base inicia vazia e os dados são partilhados por todos os utilizadores
+autenticados. A aplicação permite excluir registos com confirmação e mantém um
+histórico técnico das operações. Antes de introduzir dados reais, configure a
+senha de acesso como segredo do ambiente de hospedagem.
+
