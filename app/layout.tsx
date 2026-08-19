@@ -5,9 +5,6 @@ export const metadata: Metadata = {
   title: "Mão de Esperança — Gestão Financeira",
   description:
     "Controlo interno de caixa, orçamentos, profissionais e laboratórios da Clínica Mão de Esperança.",
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -27,3 +24,4 @@ export default function RootLayout({
     </html>
   );
 }
+
