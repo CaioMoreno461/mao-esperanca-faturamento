@@ -1,3 +1,4 @@
+import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { ensureFinanceSchema, getFinanceDb } from "@/db/runtime";
 import { calculatePatientDebt, calculateSplit } from "@/lib/finance";
 import type {
@@ -51,6 +52,8 @@ type ActionPayload = Record<string, unknown> & { action?: string };
 
 export async function GET() {
   try {
+    const user = await getChatGPTUser();
+    if (!user) return unauthorized();
     const db = await getFinanceDb();
     await ensureFinanceSchema(db);
     return Response.json(await buildDashboard(db));
@@ -61,10 +64,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await getChatGPTUser();
+    if (!user) return unauthorized();
     const db = await getFinanceDb();
     await ensureFinanceSchema(db);
     const payload = (await request.json()) as ActionPayload;
-    const actor = request.headers.get("oai-authenticated-user-email");
+    const actor = user.email;
 
     switch (payload.action) {
       case "createCase":
@@ -509,6 +514,10 @@ function requiredMoney(value: unknown, label: string) {
 function dateOnly(value: unknown) {
   const text = optionalText(value);
   return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : new Date().toISOString().slice(0, 10);
+}
+
+function unauthorized() {
+  return Response.json({ error: "Autenticação necessária." }, { status: 401 });
 }
 
 function routeError(error: unknown) {
